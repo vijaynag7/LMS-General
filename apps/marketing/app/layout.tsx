@@ -16,11 +16,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "EduSaaS — Run your coaching institute online",
+    default: "EduSaaS — Learn from expert faculty, live and recorded",
     template: "%s · EduSaaS",
   },
   description:
-    "EduSaaS is a multi-tenant learning platform for coaching institutes — live classes on your own video stack, recorded lessons, payments, and a branded student app.",
+    "Live doubt-clearing classes and recorded lessons you can revisit anytime. See the full curriculum and watch a free preview lesson before you enroll.",
 };
 
 export default function RootLayout({

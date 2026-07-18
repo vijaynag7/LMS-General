@@ -1,28 +1,26 @@
 import Link from "next/link";
-import { Video, ShieldCheck, IndianRupee, BarChart3 } from "lucide-react";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5173";
+import { Radio, PlayCircle, ListChecks, IndianRupee } from "lucide-react";
 
 const FEATURES = [
   {
-    icon: Video,
-    title: "Live classes, no third-party tool",
-    description: "Self-hosted video — no Zoom or Meet links, no per-minute fees. Screen share, whiteboard, chat, and polls built in.",
+    icon: Radio,
+    title: "Live doubt-clearing classes",
+    description: "Join live sessions with faculty and get your questions answered in real time — not just a static video.",
   },
   {
-    icon: ShieldCheck,
-    title: "Content that stays yours",
-    description: "Dynamic watermarking, signed playback links, and session limits keep your recordings from being passed around.",
+    icon: PlayCircle,
+    title: "Watch anytime, anywhere",
+    description: "Every live class is recorded automatically. Missed it, or want to revisit a topic? Watch it again on any device.",
+  },
+  {
+    icon: ListChecks,
+    title: "See the full syllabus first",
+    description: "Every course shows its complete module-wise curriculum upfront, with free preview lessons — know what you're getting before you pay.",
   },
   {
     icon: IndianRupee,
-    title: "Get paid, automatically",
-    description: "Razorpay checkout with GST-compliant invoicing on every sale — enrollment activates the moment payment clears.",
-  },
-  {
-    icon: BarChart3,
-    title: "See what's working",
-    description: "Attendance, revenue, and course-level analytics from day one — no spreadsheets required.",
+    title: "One price, no surprises",
+    description: "A single, clear price and access period per course. No hidden tiers, no fine print.",
   },
 ];
 
@@ -31,24 +29,18 @@ export default function Home() {
     <div>
       <section className="mx-auto max-w-4xl px-6 py-24 text-center">
         <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-          Run your coaching institute online — on your own video stack
+          Learn from expert faculty — live and recorded, on your schedule
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          EduSaaS gives your institute a branded platform for live classes, recorded lessons, payments, and student
-          tracking — without routing your classes through Zoom or paying per-minute video fees.
+          Structured courses with live doubt-clearing classes and recorded lessons you can revisit anytime — on
+          your phone, tablet, or laptop. Preview the curriculum and a free lesson before you commit.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <a
-            href={`${APP_URL}/onboard`}
-            className="rounded-md bg-brand px-6 py-3 text-sm font-medium text-brand-foreground hover:opacity-90"
-          >
-            Start your institute — free
-          </a>
           <Link
             href="/courses"
-            className="rounded-md border border-border px-6 py-3 text-sm font-medium hover:bg-muted"
+            className="rounded-md bg-brand px-6 py-3 text-sm font-medium text-brand-foreground hover:opacity-90"
           >
-            View courses
+            Browse courses
           </Link>
         </div>
       </section>
@@ -66,16 +58,16 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-3xl px-6 py-24 text-center">
-        <h2 className="text-2xl font-semibold">Ready to go live?</h2>
+        <h2 className="text-2xl font-semibold">Ready to start learning?</h2>
         <p className="mt-2 text-muted-foreground">
-          Create your branded space, add your first course, and start teaching — in under 30 minutes.
+          Browse our courses, check out the curriculum, and watch a free preview lesson before you enroll.
         </p>
-        <a
-          href={`${APP_URL}/onboard`}
+        <Link
+          href="/courses"
           className="mt-6 inline-block rounded-md bg-brand px-6 py-3 text-sm font-medium text-brand-foreground hover:opacity-90"
         >
-          Get started
-        </a>
+          Browse courses
+        </Link>
       </section>
     </div>
   );

@@ -56,13 +56,13 @@ export function ContactForm() {
         {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
       </div>
       <div className="space-y-1.5">
-        <label htmlFor="instituteName" className="text-sm font-medium">
-          Institute name (optional)
+        <label htmlFor="courseInterest" className="text-sm font-medium">
+          Which course? (optional)
         </label>
         <input
-          id="instituteName"
+          id="courseInterest"
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-          {...register("instituteName")}
+          {...register("courseInterest")}
         />
       </div>
       <div className="space-y-1.5">

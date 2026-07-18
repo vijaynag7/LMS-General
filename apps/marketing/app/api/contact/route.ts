@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
 
-  const { name, email, instituteName, message } = parsed.data;
+  const { name, email, courseInterest, message } = parsed.data;
   const resendApiKey = process.env.RESEND_API_KEY;
   const toEmail = process.env.CONTACT_TO_EMAIL;
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       to: toEmail,
       reply_to: email,
       subject: `New contact form submission from ${name}`,
-      html: `<p><strong>${name}</strong> (${email})${instituteName ? ` — ${instituteName}` : ""}</p><p>${message}</p>`,
+      html: `<p><strong>${name}</strong> (${email})${courseInterest ? ` — interested in: ${courseInterest}` : ""}</p><p>${message}</p>`,
     }),
   });
 

@@ -27,12 +27,12 @@ export function SiteHeader() {
           <a href={`${APP_URL}/login`} className="text-sm text-muted-foreground hover:text-foreground">
             Sign in
           </a>
-          <a
-            href={`${APP_URL}/onboard`}
+          <Link
+            href="/courses"
             className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:opacity-90"
           >
-            Get started
-          </a>
+            Browse courses
+          </Link>
         </div>
       </div>
     </header>

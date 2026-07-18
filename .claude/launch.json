@@ -18,6 +18,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@edusaas/mobile", "run", "web"],
       "port": 8081
+    },
+    {
+      "name": "vopaj-marketing",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "E:\\Claude working\\Vopaj-LMS\\apps\\marketing", "dev", "--", "-p", "3001"],
+      "port": 3001
     }
   ]
 }
