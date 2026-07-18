@@ -1,0 +1,24 @@
+{
+  "name": "edusaas",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.14.0",
+  "scripts": {
+    "dev:marketing": "pnpm --filter @edusaas/marketing dev",
+    "dev:product": "pnpm --filter @edusaas/product dev",
+    "dev:mobile": "pnpm --filter @edusaas/mobile start",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts"
+  },
+  "devDependencies": {
+    "supabase": "^2.15.0",
+    "typescript": "^5.6.3"
+  }
+}

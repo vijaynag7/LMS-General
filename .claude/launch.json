@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "product",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@edusaas/product", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "marketing",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@edusaas/marketing", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "mobile",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@edusaas/mobile", "run", "web"],
+      "port": 8081
+    }
+  ]
+}
