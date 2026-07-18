@@ -45,10 +45,10 @@ export default function Home() {
             Start your institute — free
           </a>
           <Link
-            href="/pricing"
+            href="/courses"
             className="rounded-md border border-border px-6 py-3 text-sm font-medium hover:bg-muted"
           >
-            See pricing
+            View courses
           </Link>
         </div>
       </section>

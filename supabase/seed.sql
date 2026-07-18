@@ -54,10 +54,11 @@ begin
     (gen_random_uuid(), v_faculty_id::text, v_faculty_id, jsonb_build_object('sub', v_faculty_id::text, 'email', 'faculty@demo.edusaas.app'), 'email', now(), now(), now()),
     (gen_random_uuid(), v_student_id::text, v_student_id, jsonb_build_object('sub', v_student_id::text, 'email', 'student@demo.edusaas.app'), 'email', now(), now(), now());
 
-  insert into public.courses (id, tenant_id, title, description, price, currency, validity_days, status, created_by)
+  insert into public.courses (id, tenant_id, title, description, duration_label, price, currency, validity_days, status, created_by)
   values (
     v_course_id, v_tenant_id, 'Foundations of Algebra',
     'A demo course seeded for local development — live class + recorded lesson.',
+    '8 weeks',
     999.00, 'INR', 365, 'published', v_admin_id
   );
 

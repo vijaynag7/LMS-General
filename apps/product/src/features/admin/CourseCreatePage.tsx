@@ -52,6 +52,10 @@ export default function CourseCreatePage() {
               <Label htmlFor="description">Description</Label>
               <Textarea id="description" rows={4} {...register("description")} />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="durationLabel">Duration</Label>
+              <Input id="durationLabel" placeholder="e.g. 8 weeks, 3 months, 40 hours" {...register("durationLabel")} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="price">Price</Label>

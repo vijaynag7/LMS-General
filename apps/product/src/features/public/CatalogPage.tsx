@@ -35,9 +35,14 @@ export default function CatalogPage() {
               <CardHeader>
                 <CardTitle className="line-clamp-2">{course.title}</CardTitle>
                 <CardDescription className="line-clamp-3">{course.description}</CardDescription>
-                <p className="pt-2 font-medium text-brand">
-                  {course.price === 0 ? "Free" : `${course.currency} ${course.price}`}
-                </p>
+                <div className="flex items-center justify-between pt-2">
+                  <p className="font-medium text-brand">
+                    {course.price === 0 ? "Free" : `${course.currency} ${course.price}`}
+                  </p>
+                  {course.duration_label && (
+                    <p className="text-xs text-muted-foreground">{course.duration_label}</p>
+                  )}
+                </div>
               </CardHeader>
             </Card>
           </Link>

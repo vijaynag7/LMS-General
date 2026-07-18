@@ -38,6 +38,10 @@ export default function CourseDetailPage() {
       <h1 className="text-3xl font-semibold">{course.title}</h1>
       <p className="mt-2 text-muted-foreground">{course.description}</p>
 
+      {course.duration_label && (
+        <p className="mt-2 text-sm text-muted-foreground">Duration: {course.duration_label}</p>
+      )}
+
       <div className="mt-6 flex items-center gap-4">
         <span className="text-xl font-semibold">{isFree ? "Free" : `${course.currency} ${course.price}`}</span>
         {enrollment ? (

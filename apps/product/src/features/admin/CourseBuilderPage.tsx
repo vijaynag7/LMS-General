@@ -16,13 +16,17 @@ import {
   useUpdateLesson,
   type ModuleWithLessons,
 } from "@/hooks/data/useCurriculum";
-import type { LessonType } from "@edusaas/shared";
+import type { Database, LessonType } from "@edusaas/shared";
 import { useLiveSessionForLesson, useUpdateLiveSessionSchedule } from "@/hooks/data/useLiveSession";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+type CourseRow = Database["public"]["Tables"]["courses"]["Row"];
 
 const LESSON_ICON: Record<LessonType, typeof Video> = {
   live: Video,
@@ -40,6 +44,7 @@ export default function CourseBuilderPage() {
   const reorderModules = useReorderModules(courseId!);
   const updateCourse = useUpdateCourse(courseId!);
   const [newModuleTitle, setNewModuleTitle] = React.useState("");
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (!modules) return;
@@ -66,6 +71,9 @@ export default function CourseBuilderPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={course?.status === "published" ? "success" : "secondary"}>{course?.status}</Badge>
+          <Button size="sm" variant="outline" onClick={() => setDetailsOpen((v) => !v)}>
+            {detailsOpen ? "Close details" : "Edit details"}
+          </Button>
           {course?.status !== "published" && (
             <Button
               size="sm"
@@ -78,6 +86,14 @@ export default function CourseBuilderPage() {
           )}
         </div>
       </div>
+
+      {detailsOpen && course && (
+        <CourseDetailsForm
+          course={course}
+          onSaved={() => setDetailsOpen(false)}
+          updateCourse={updateCourse}
+        />
+      )}
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
@@ -105,6 +121,79 @@ export default function CourseBuilderPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+function CourseDetailsForm({
+  course,
+  updateCourse,
+  onSaved,
+}: {
+  course: CourseRow;
+  updateCourse: ReturnType<typeof useUpdateCourse>;
+  onSaved: () => void;
+}) {
+  const [description, setDescription] = React.useState(course.description ?? "");
+  const [durationLabel, setDurationLabel] = React.useState(course.duration_label ?? "");
+  const [price, setPrice] = React.useState(String(course.price));
+
+  const save = async () => {
+    try {
+      await updateCourse.mutateAsync({
+        description,
+        durationLabel: durationLabel || undefined,
+        price: Number(price),
+      });
+      toast.success("Course details updated");
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update course");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Course details</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="details-description">Description</Label>
+          <Textarea
+            id="details-description"
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="details-duration">Duration</Label>
+            <Input
+              id="details-duration"
+              placeholder="e.g. 8 weeks"
+              value={durationLabel}
+              onChange={(e) => setDurationLabel(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="details-price">
+              Price ({course.currency})
+            </Label>
+            <Input
+              id="details-price"
+              type="number"
+              step="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
+        </div>
+        <Button size="sm" variant="brand" onClick={save} disabled={updateCourse.isPending}>
+          {updateCourse.isPending ? "Saving…" : "Save details"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

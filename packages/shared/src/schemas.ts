@@ -56,6 +56,7 @@ export type TenantBrandingInput = z.infer<typeof tenantBrandingSchema>;
 export const courseSchema = z.object({
   title: z.string().trim().min(3, "Title is required"),
   description: z.string().trim().max(5000).optional(),
+  durationLabel: z.string().trim().max(60).optional(),
   price: z.number().min(0),
   currency: z.enum(["INR", "USD"]),
   validityDays: z.number().int().min(0),

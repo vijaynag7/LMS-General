@@ -4,7 +4,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5173";
 
 const NAV = [
   { href: "/", label: "Home" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/courses", label: "Courses" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];

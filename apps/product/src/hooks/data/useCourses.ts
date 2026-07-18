@@ -44,6 +44,7 @@ export function useCreateCourse() {
           tenant_id: profile.tenant_id,
           title: input.title,
           description: input.description,
+          duration_label: input.durationLabel,
           price: input.price,
           currency: input.currency,
           validity_days: input.validityDays,
@@ -68,6 +69,7 @@ export function useUpdateCourse(courseId: string) {
         .update({
           ...(input.title !== undefined && { title: input.title }),
           ...(input.description !== undefined && { description: input.description }),
+          ...(input.durationLabel !== undefined && { duration_label: input.durationLabel }),
           ...(input.price !== undefined && { price: input.price }),
           ...(input.currency !== undefined && { currency: input.currency }),
           ...(input.validityDays !== undefined && { validity_days: input.validityDays }),
