@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Radio, PlayCircle, ListChecks, IndianRupee } from "lucide-react";
+import { Radio, PlayCircle, ListChecks, IndianRupee, ArrowRight } from "lucide-react";
 
 const FEATURES = [
   {
@@ -54,6 +54,25 @@ export default function Home() {
               <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 py-16 text-center sm:flex-row sm:text-left">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-brand">Also from us</p>
+            <h2 className="mt-1 text-xl font-semibold">Vopaj — career training for finance professionals</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Mock interviews, mentorship, and practical courses for CA, CMA, CS, and finance professionals —
+              connected to the Vopaj job portal.
+            </p>
+          </div>
+          <Link
+            href="/vopaj"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-5 py-2.5 text-sm font-medium hover:bg-muted"
+          >
+            Explore Vopaj <ArrowRight className="size-4" />
+          </Link>
         </div>
       </section>
 
