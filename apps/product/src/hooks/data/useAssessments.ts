@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import type { Database } from "@edusaas/shared";
+import type { Database, QuestionType } from "@edusaas/shared";
 
 type QuizRow = Database["public"]["Tables"]["quizzes"]["Row"];
 type QuestionRow = Database["public"]["Tables"]["questions"]["Row"];
@@ -20,6 +20,65 @@ export function useQuizForLesson(lessonId: string | undefined) {
       return data as unknown as QuizWithQuestions | null;
     },
     enabled: !!lessonId,
+  });
+}
+
+export function useCreateQuiz(lessonId: string, title: string) {
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!profile?.tenant_id) throw new Error("No tenant");
+      const { data, error } = await supabase
+        .from("quizzes")
+        .insert({ tenant_id: profile.tenant_id, lesson_id: lessonId, title })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quiz", "lesson", lessonId] }),
+  });
+}
+
+export function useCreateQuestion(lessonId: string, quizId: string | undefined) {
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      type: QuestionType;
+      prompt: string;
+      options: string[];
+      correctOptionIndex: number;
+      marks: number;
+      orderIndex: number;
+    }) => {
+      if (!profile?.tenant_id) throw new Error("No tenant");
+      if (!quizId) throw new Error("No quiz");
+      const { error } = await supabase.from("questions").insert({
+        tenant_id: profile.tenant_id,
+        quiz_id: quizId,
+        type: input.type,
+        prompt: input.prompt,
+        options: input.options,
+        correct_option_index: input.correctOptionIndex,
+        marks: input.marks,
+        order_index: input.orderIndex,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quiz", "lesson", lessonId] }),
+  });
+}
+
+export function useDeleteQuestion(lessonId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (questionId: string) => {
+      const { error } = await supabase.from("questions").delete().eq("id", questionId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quiz", "lesson", lessonId] }),
   });
 }
 

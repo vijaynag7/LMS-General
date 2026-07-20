@@ -117,3 +117,22 @@ export function useDeleteLesson(courseId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["modules", courseId] }),
   });
 }
+
+// Uploads via the upload-lesson-content Edge Function (service role), which
+// writes to the private "lesson-content" bucket and points the lesson's
+// content_ref at it. Playback goes through the get-playback-url Edge
+// Function, which mints a signed URL after checking access — see that
+// function's own comment for why this isn't a public URL.
+export function useUploadLessonContent(courseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ lessonId, file }: { lessonId: string; file: File }) => {
+      const form = new FormData();
+      form.append("lessonId", lessonId);
+      form.append("file", file);
+      const { error } = await supabase.functions.invoke("upload-lesson-content", { body: form });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["modules", courseId] }),
+  });
+}

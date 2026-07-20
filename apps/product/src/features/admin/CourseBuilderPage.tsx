@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Trash2, Video, HelpCircle, ClipboardList, File } from "lucide-react";
+import { GripVertical, Plus, Trash2, Video, HelpCircle, ClipboardList, File, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCourse, useUpdateCourse } from "@/hooks/data/useCourses";
 import {
@@ -14,8 +14,10 @@ import {
   useCreateLesson,
   useDeleteLesson,
   useUpdateLesson,
+  useUploadLessonContent,
   type ModuleWithLessons,
 } from "@/hooks/data/useCurriculum";
+import { useQuizForLesson, useCreateQuiz, useCreateQuestion, useDeleteQuestion } from "@/hooks/data/useAssessments";
 import type { Database, LessonType } from "@edusaas/shared";
 import { useLiveSessionForLesson, useUpdateLiveSessionSchedule } from "@/hooks/data/useLiveSession";
 import { Button } from "@/components/ui/button";
@@ -266,6 +268,10 @@ function SortableModule({ module, courseId }: { module: ModuleWithLessons; cours
                 </div>
               </div>
               {lesson.type === "live" && <LiveScheduleEditor lessonId={lesson.id} />}
+              {(lesson.type === "document" || lesson.type === "recorded") && (
+                <ContentUploader lesson={lesson} courseId={courseId} />
+              )}
+              {lesson.type === "quiz" && <QuizEditor lessonId={lesson.id} lessonTitle={lesson.title} />}
             </div>
           );
         })}
@@ -311,6 +317,180 @@ function LiveScheduleEditor({ lessonId }: { lessonId: string }) {
         className="h-7 w-auto text-xs"
       />
       <Badge variant={session.status === "live" ? "success" : "outline"}>{session.status}</Badge>
+    </div>
+  );
+}
+
+type LessonRow = Database["public"]["Tables"]["lessons"]["Row"];
+
+function ContentUploader({ lesson, courseId }: { lesson: LessonRow; courseId: string }) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const uploadContent = useUploadLessonContent(courseId);
+  const contentRef = lesson.content_ref as { path?: string; url?: string } | null;
+  const fileName = contentRef?.path?.split("/").pop();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await uploadContent.mutateAsync({ lessonId: lesson.id, file });
+      toast.success("File uploaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 pl-6 text-xs text-muted-foreground">
+      <span>{fileName ? `Attached: ${fileName}` : "No file attached yet"}</span>
+      <input ref={inputRef} type="file" className="hidden" onChange={handleFileChange} />
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7"
+        disabled={uploadContent.isPending}
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload className="size-3.5" />
+        {uploadContent.isPending ? "Uploading…" : fileName ? "Replace file" : "Upload file"}
+      </Button>
+    </div>
+  );
+}
+
+function QuizEditor({ lessonId, lessonTitle }: { lessonId: string; lessonTitle: string }) {
+  const { data: quiz } = useQuizForLesson(lessonId);
+  const createQuiz = useCreateQuiz(lessonId, lessonTitle);
+  const createQuestion = useCreateQuestion(lessonId, quiz?.id);
+  const deleteQuestion = useDeleteQuestion(lessonId);
+
+  const [prompt, setPrompt] = React.useState("");
+  const [options, setOptions] = React.useState(["", ""]);
+  const [correctIndex, setCorrectIndex] = React.useState(0);
+  const [marks, setMarks] = React.useState(1);
+
+  if (!quiz) {
+    return (
+      <div className="pl-6">
+        <Button size="sm" variant="outline" onClick={() => createQuiz.mutate()} disabled={createQuiz.isPending}>
+          {createQuiz.isPending ? "Setting up…" : "Set up quiz questions"}
+        </Button>
+      </div>
+    );
+  }
+
+  const resetForm = () => {
+    setPrompt("");
+    setOptions(["", ""]);
+    setCorrectIndex(0);
+    setMarks(1);
+  };
+
+  const addQuestion = async () => {
+    if (!prompt.trim() || options.some((o) => !o.trim())) {
+      toast.error("Fill in the question and every option");
+      return;
+    }
+    try {
+      await createQuestion.mutateAsync({
+        type: "mcq",
+        prompt,
+        options,
+        correctOptionIndex: correctIndex,
+        marks,
+        orderIndex: quiz.questions?.length ?? 0,
+      });
+      resetForm();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not add question");
+    }
+  };
+
+  return (
+    <div className="space-y-3 pl-6">
+      {quiz.questions?.map((q, i) => (
+        <div key={q.id} className="rounded-md border px-3 py-2 text-xs">
+          <div className="flex items-start justify-between gap-2">
+            <span className="font-medium">
+              {i + 1}. {q.prompt} <span className="text-muted-foreground">({q.marks} marks)</span>
+            </span>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => deleteQuestion.mutate(q.id)}
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
+          <ul className="mt-1.5 space-y-0.5">
+            {((q.options as string[] | null) ?? []).map((opt, oi) => (
+              <li key={oi} className={oi === q.correct_option_index ? "font-medium text-brand" : "text-muted-foreground"}>
+                {opt}
+                {oi === q.correct_option_index ? " ✓" : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+
+      <div className="space-y-2 rounded-md border border-dashed px-3 py-3">
+        <Input
+          placeholder="Question"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="h-8 text-xs"
+        />
+        {options.map((opt, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={correctIndex === i}
+              onChange={() => setCorrectIndex(i)}
+              aria-label={`Correct answer is option ${i + 1}`}
+            />
+            <Input
+              placeholder={`Option ${i + 1}`}
+              value={opt}
+              onChange={(e) => {
+                const next = [...options];
+                next[i] = e.target.value;
+                setOptions(next);
+              }}
+              className="h-8 text-xs"
+            />
+            {options.length > 2 && (
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setOptions(options.filter((_, oi) => oi !== i));
+                  if (correctIndex >= i && correctIndex > 0) setCorrectIndex(correctIndex - 1);
+                }}
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+        <div className="flex items-center gap-2 pt-1">
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setOptions([...options, ""])}>
+            <Plus className="size-3.5" /> Option
+          </Button>
+          <Label className="text-xs text-muted-foreground">Marks</Label>
+          <Input
+            type="number"
+            min={0}
+            value={marks}
+            onChange={(e) => setMarks(Number(e.target.value))}
+            className="h-7 w-16 text-xs"
+          />
+          <Button size="sm" className="ml-auto h-7 text-xs" onClick={addQuestion} disabled={createQuestion.isPending}>
+            Add question
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
