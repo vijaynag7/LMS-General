@@ -5,15 +5,19 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { sendNotification } from "../_shared/notify.ts";
+import { corsHeaders, handlePreflight } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
   }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401, headers: corsHeaders });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -25,12 +29,12 @@ Deno.serve(async (req) => {
     data: { user },
   } = await callerClient.auth.getUser();
   if (!user) {
-    return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401, headers: corsHeaders });
   }
 
   const { courseId } = await req.json().catch(() => ({}));
   if (!courseId) {
-    return new Response(JSON.stringify({ error: "courseId is required" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "courseId is required" }), { status: 400, headers: corsHeaders });
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
@@ -42,11 +46,12 @@ Deno.serve(async (req) => {
     .single();
 
   if (!course || course.status !== "published") {
-    return new Response(JSON.stringify({ error: "Course not found" }), { status: 404 });
+    return new Response(JSON.stringify({ error: "Course not found" }), { status: 404, headers: corsHeaders });
   }
   if (Number(course.price) !== 0) {
     return new Response(JSON.stringify({ error: "This course is not free — use checkout-order instead" }), {
       status: 400,
+      headers: corsHeaders,
     });
   }
 
@@ -69,7 +74,7 @@ Deno.serve(async (req) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 400 });
+    return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: corsHeaders });
   }
 
   await sendNotification({
@@ -83,6 +88,6 @@ Deno.serve(async (req) => {
 
   return new Response(JSON.stringify({ enrollment: data }), {
     status: 200,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });

@@ -10,6 +10,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { sendNotification } from "../_shared/notify.ts";
+import { corsHeaders, handlePreflight } from "../_shared/cors.ts";
 
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -26,13 +27,16 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
   }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401, headers: corsHeaders });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -40,7 +44,10 @@ Deno.serve(async (req) => {
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
   if (!keySecret) {
-    return new Response(JSON.stringify({ error: "Razorpay is not configured on the server yet" }), { status: 503 });
+    return new Response(JSON.stringify({ error: "Razorpay is not configured on the server yet" }), {
+      status: 503,
+      headers: corsHeaders,
+    });
   }
 
   const callerClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
@@ -48,17 +55,17 @@ Deno.serve(async (req) => {
     data: { user },
   } = await callerClient.auth.getUser();
   if (!user) {
-    return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401, headers: corsHeaders });
   }
 
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json().catch(() => ({}));
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-    return new Response(JSON.stringify({ error: "Missing Razorpay fields" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "Missing Razorpay fields" }), { status: 400, headers: corsHeaders });
   }
 
   const expected = await hmacSha256Hex(keySecret, `${razorpay_order_id}|${razorpay_payment_id}`);
   if (expected !== razorpay_signature) {
-    return new Response(JSON.stringify({ error: "Signature mismatch" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "Signature mismatch" }), { status: 400, headers: corsHeaders });
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
@@ -70,7 +77,7 @@ Deno.serve(async (req) => {
     .single();
 
   if (!payment) {
-    return new Response(JSON.stringify({ error: "Payment record not found" }), { status: 404 });
+    return new Response(JSON.stringify({ error: "Payment record not found" }), { status: 404, headers: corsHeaders });
   }
 
   let invoiceNumber = payment.gst_invoice_number;
@@ -116,5 +123,5 @@ Deno.serve(async (req) => {
     },
   }).catch(() => {});
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });

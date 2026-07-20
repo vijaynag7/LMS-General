@@ -1,25 +1,28 @@
-// Returns a playable URL for a lesson's video, after checking server-side
-// that the caller is allowed to see it (free preview, enrolled, or tenant
-// staff). This is the enforcement point referenced by the "lessons_select"
-// RLS policy comment — the DB row is broadly readable for catalog browsing,
-// but the *actual* video is only handed out here.
+// Returns a playable URL for a lesson's video/document, after checking
+// server-side that the caller is allowed to see it (free preview, enrolled,
+// or tenant staff). This is the enforcement point referenced by the
+// "lessons_select" RLS policy comment — the DB row is broadly readable for
+// catalog browsing, but the *actual* file is only handed out here.
 //
-// content_ref on the lesson is expected to hold { "url": "..." } — a signed
-// Storage URL or CDN URL in a real deployment. This function does not mint
-// a signed URL itself (no Storage/CDN wired up yet); it just gates access to
-// whatever's stored, which is the piece that matters for the access-control
-// model described in PRD §7.11.
+// content_ref on the lesson holds either { "path": "..." } — an object path
+// in the private "lesson-content" Storage bucket, signed here on demand —
+// or { "url": "..." } for an external CDN/YouTube/Vimeo link, returned as-is.
+// This is the access-control model described in PRD §7.11.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { corsHeaders, handlePreflight } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
   }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401, headers: corsHeaders });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -31,12 +34,12 @@ Deno.serve(async (req) => {
     data: { user },
   } = await callerClient.auth.getUser();
   if (!user) {
-    return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401, headers: corsHeaders });
   }
 
   const { lessonId } = await req.json().catch(() => ({}));
   if (!lessonId) {
-    return new Response(JSON.stringify({ error: "lessonId is required" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "lessonId is required" }), { status: 400, headers: corsHeaders });
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
@@ -48,7 +51,7 @@ Deno.serve(async (req) => {
     .single();
 
   if (!lesson) {
-    return new Response(JSON.stringify({ error: "Lesson not found" }), { status: 404 });
+    return new Response(JSON.stringify({ error: "Lesson not found" }), { status: 404, headers: corsHeaders });
   }
 
   const { data: profile } = await admin.from("profiles").select("role, tenant_id").eq("id", user.id).single();
@@ -67,9 +70,17 @@ Deno.serve(async (req) => {
   }
 
   if (!allowed) {
-    return new Response(JSON.stringify({ error: "Not enrolled in this course" }), { status: 403 });
+    return new Response(JSON.stringify({ error: "Not enrolled in this course" }), { status: 403, headers: corsHeaders });
   }
 
-  const url = (lesson.content_ref as { url?: string } | null)?.url ?? null;
-  return new Response(JSON.stringify({ url }), { status: 200, headers: { "Content-Type": "application/json" } });
+  const contentRef = lesson.content_ref as { url?: string; path?: string } | null;
+  let url: string | null = null;
+  if (contentRef?.path) {
+    const { data: signed } = await admin.storage.from("lesson-content").createSignedUrl(contentRef.path, 60 * 60);
+    url = signed?.signedUrl ?? null;
+  } else if (contentRef?.url) {
+    url = contentRef.url;
+  }
+
+  return new Response(JSON.stringify({ url }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });

@@ -6,10 +6,14 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { sendNotification } from "../_shared/notify.ts";
+import { corsHeaders, handlePreflight } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -18,11 +22,12 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => null);
   const { instituteName, slug, category, adminName, adminEmail, adminPassword } = body ?? {};
   if (!instituteName || !slug || !category || !adminName || !adminEmail || !adminPassword) {
-    return new Response(JSON.stringify({ error: "All fields are required" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "All fields are required" }), { status: 400, headers: corsHeaders });
   }
   if (!/^[a-z0-9-]{3,40}$/.test(slug)) {
     return new Response(JSON.stringify({ error: "Slug must be lowercase letters, numbers, and hyphens only" }), {
       status: 400,
+      headers: corsHeaders,
     });
   }
 
@@ -30,7 +35,7 @@ Deno.serve(async (req) => {
 
   const { data: existing } = await admin.from("tenants").select("id").eq("slug", slug).maybeSingle();
   if (existing) {
-    return new Response(JSON.stringify({ error: "That subdomain is already taken" }), { status: 409 });
+    return new Response(JSON.stringify({ error: "That subdomain is already taken" }), { status: 409, headers: corsHeaders });
   }
 
   const { data: tenant, error: tenantError } = await admin
@@ -39,7 +44,7 @@ Deno.serve(async (req) => {
     .select("*")
     .single();
   if (tenantError) {
-    return new Response(JSON.stringify({ error: tenantError.message }), { status: 400 });
+    return new Response(JSON.stringify({ error: tenantError.message }), { status: 400, headers: corsHeaders });
   }
 
   const { data: userResult, error: userError } = await admin.auth.admin.createUser({
@@ -55,6 +60,7 @@ Deno.serve(async (req) => {
     await admin.from("tenants").delete().eq("id", tenant.id);
     return new Response(JSON.stringify({ error: userError?.message ?? "Could not create admin account" }), {
       status: 400,
+      headers: corsHeaders,
     });
   }
 
@@ -69,6 +75,6 @@ Deno.serve(async (req) => {
 
   return new Response(JSON.stringify({ tenant, category }), {
     status: 200,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
