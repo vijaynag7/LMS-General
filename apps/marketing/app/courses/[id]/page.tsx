@@ -1,9 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock, Layers, ChevronRight, BadgeCheck, Smartphone, Infinity as InfinityIcon } from "lucide-react";
+import {
+  Clock,
+  Layers,
+  ChevronRight,
+  BadgeCheck,
+  Smartphone,
+  Infinity as InfinityIcon,
+  PlayCircle,
+  UserRound,
+} from "lucide-react";
 import { supabase, TENANT_SLUG } from "@/lib/supabase";
 import { CurriculumAccordion } from "./curriculum-accordion";
+import { CourseTabs } from "./course-tabs";
+import { ShareButton } from "./share-button";
 
 export const revalidate = 60;
 
@@ -40,10 +51,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
   const modules = (course.modules ?? []).slice().sort((a, b) => a.order_index - b.order_index);
   const lessonCount = modules.reduce((sum, m) => sum + (m.lessons?.length ?? 0), 0);
-  const previewCount = modules.reduce(
-    (sum, m) => sum + (m.lessons?.filter((l) => l.is_free_preview).length ?? 0),
-    0,
-  );
+  const previewLessons = modules.flatMap((m) => (m.lessons ?? []).filter((l) => l.is_free_preview));
   const isFree = Number(course.price) === 0;
   const enrollHref = `${APP_URL}/courses/${course.id}?tenant=${TENANT_SLUG}`;
 
@@ -52,6 +60,96 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     { icon: Layers, label: `${modules.length} ${modules.length === 1 ? "module" : "modules"} · ${lessonCount} ${lessonCount === 1 ? "lesson" : "lessons"}` },
     { icon: InfinityIcon, label: `${course.validity_days} days access` },
   ].filter((s): s is { icon: typeof Clock; label: string } => s !== null);
+
+  const overviewTab = (
+    <div className="space-y-8">
+      <div className="rounded-xl border border-border bg-muted/40 p-6">
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand">Try before you buy</p>
+        <h3 className="mt-1 font-semibold">Course demo</h3>
+        {previewLessons.length > 0 ? (
+          <>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Watch these lessons free — no enrollment needed — to see the teaching style before you commit.
+            </p>
+            <ul className="mt-3 space-y-1.5">
+              {previewLessons.map((l) => (
+                <li key={l.id} className="flex items-center gap-2 text-sm">
+                  <PlayCircle className="size-4 shrink-0 text-brand" /> {l.title}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">No free preview lessons yet — check the Content tab for the full curriculum.</p>
+        )}
+      </div>
+
+      {course.description && (
+        <div>
+          <h3 className="font-semibold">About this course</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{course.description}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Feature icon={BadgeCheck} title="Live + recorded" description="Attend live classes or catch up anytime with recordings." />
+        <Feature icon={Smartphone} title="Any device" description="Learn from your laptop, tablet, or phone." />
+        <Feature icon={InfinityIcon} title={`${course.validity_days} days access`} description="Revisit lessons as many times as you need." />
+      </div>
+    </div>
+  );
+
+  const contentTab = (
+    <div>
+      <p className="text-sm text-muted-foreground">
+        {modules.length} {modules.length === 1 ? "module" : "modules"}, {lessonCount}{" "}
+        {lessonCount === 1 ? "lesson" : "lessons"} total.
+      </p>
+      {modules.length > 0 ? (
+        <div className="mt-4">
+          <CurriculumAccordion modules={modules} />
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-muted-foreground">Curriculum coming soon.</p>
+      )}
+    </div>
+  );
+
+  const instructorsTab = (
+    <div className="rounded-xl border border-dashed border-border p-8 text-center">
+      <UserRound className="mx-auto size-8 text-muted-foreground" />
+      <p className="mt-3 font-medium">Instructor details coming soon</p>
+      <p className="mt-1 text-sm text-muted-foreground">We'll introduce the faculty teaching this course here.</p>
+    </div>
+  );
+
+  const faqTab = (
+    <div className="space-y-3">
+      <FaqItem question="How long do I have access to this course?">
+        {course.validity_days} days from the date you enroll.
+      </FaqItem>
+      <FaqItem question="Can I preview the course before buying?">
+        {previewLessons.length > 0
+          ? `Yes — ${previewLessons.length} ${previewLessons.length === 1 ? "lesson is" : "lessons are"} available to watch free before you enroll. See the Overview tab.`
+          : "This course doesn't have free preview lessons yet, but you can check the full curriculum under the Content tab before deciding."}
+      </FaqItem>
+      <FaqItem question="Is this course live or recorded?">
+        A mix of both where applicable — live classes for real-time doubt-clearing, and recordings of every live
+        session so you can revisit anytime.
+      </FaqItem>
+      <FaqItem question="What if I have doubts during the course?">
+        Live classes are built for real-time Q&A with faculty. Check the Content tab to see which lessons in this
+        course are live sessions.
+      </FaqItem>
+    </div>
+  );
+
+  const reviewsTab = (
+    <div className="rounded-xl border border-dashed border-border p-8 text-center">
+      <p className="font-medium">No reviews yet</p>
+      <p className="mt-1 text-sm text-muted-foreground">Be the first to enroll and share yours.</p>
+    </div>
+  );
 
   return (
     <div>
@@ -64,10 +162,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       </div>
 
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-10 px-6 py-8 lg:grid-cols-3">
-        <div className="space-y-10 lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
           <div>
-            <h1 className="text-3xl font-semibold">{course.title}</h1>
-            {course.description && <p className="mt-3 text-muted-foreground">{course.description}</p>}
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-3xl font-semibold">{course.title}</h1>
+              <ShareButton title={course.title} />
+            </div>
 
             <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               {stats.map(({ icon: Icon, label }) => (
@@ -76,34 +176,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
                 </span>
               ))}
             </div>
-
-            {previewCount > 0 && (
-              <p className="mt-4 text-sm text-brand">
-                {previewCount} free preview {previewCount === 1 ? "lesson" : "lessons"} available before you enroll.
-              </p>
-            )}
           </div>
 
-          <section id="curriculum">
-            <h2 className="text-xl font-semibold">Course curriculum</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {modules.length} {modules.length === 1 ? "module" : "modules"}, {lessonCount}{" "}
-              {lessonCount === 1 ? "lesson" : "lessons"} total.
-            </p>
-            {modules.length > 0 ? (
-              <div className="mt-4">
-                <CurriculumAccordion modules={modules} />
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">Curriculum coming soon.</p>
-            )}
-          </section>
-
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Feature icon={BadgeCheck} title="Live + recorded" description="Attend live classes or catch up anytime with recordings." />
-            <Feature icon={Smartphone} title="Any device" description="Learn from your laptop, tablet, or phone." />
-            <Feature icon={InfinityIcon} title={`${course.validity_days} days access`} description="Revisit lessons as many times as you need." />
-          </section>
+          <CourseTabs
+            tabs={[
+              { id: "overview", label: "Overview", content: overviewTab },
+              { id: "content", label: "Content", content: contentTab },
+              { id: "instructors", label: "Instructors", content: instructorsTab },
+              { id: "faq", label: "FAQ", content: faqTab },
+              { id: "reviews", label: "Reviews", content: reviewsTab },
+            ]}
+          />
         </div>
 
         <div className="lg:col-span-1">
@@ -146,5 +229,16 @@ function Feature({ icon: Icon, title, description }: { icon: typeof BadgeCheck; 
       <p className="mt-2 text-sm font-medium">{title}</p>
       <p className="mt-1 text-xs text-muted-foreground">{description}</p>
     </div>
+  );
+}
+
+function FaqItem({ question, children }: { question: string; children: React.ReactNode }) {
+  return (
+    <details className="group rounded-lg border border-border p-4">
+      <summary className="cursor-pointer list-none font-medium marker:content-none">
+        {question}
+      </summary>
+      <p className="mt-2 text-sm text-muted-foreground">{children}</p>
+    </details>
   );
 }
