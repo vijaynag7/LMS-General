@@ -37,6 +37,9 @@ export function useCourseCatalogDetail(courseId: string | undefined) {
         .from("courses")
         .select("*, modules(*, lessons(*))")
         .eq("id", courseId!)
+        .is("deleted_at", null)
+        .is("modules.deleted_at", null)
+        .is("modules.lessons.deleted_at", null)
         .single();
       if (error) throw error;
       return data as unknown as CourseWithCurriculum;

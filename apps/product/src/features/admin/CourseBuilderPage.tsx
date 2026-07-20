@@ -57,7 +57,10 @@ export default function CourseBuilderPage() {
   };
 
   const addModule = async () => {
-    if (!newModuleTitle.trim()) return;
+    if (!newModuleTitle.trim()) {
+      toast.error("Enter a module title first");
+      return;
+    }
     try {
       await createModule.mutateAsync({ title: newModuleTitle, order: modules?.length ?? 0 });
       setNewModuleTitle("");
@@ -213,7 +216,10 @@ function SortableModule({ module, courseId }: { module: ModuleWithLessons; cours
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   const addLesson = async () => {
-    if (!newLessonTitle.trim()) return;
+    if (!newLessonTitle.trim()) {
+      toast.error("Enter a lesson title first");
+      return;
+    }
     try {
       await createLesson.mutateAsync({ title: newLessonTitle, type: newLessonType, order: module.lessons?.length ?? 0 });
       setNewLessonTitle("");

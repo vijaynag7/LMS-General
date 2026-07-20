@@ -16,6 +16,7 @@ export function useModules(courseId: string | undefined) {
         .select("*, lessons(*)")
         .eq("course_id", courseId!)
         .is("deleted_at", null)
+        .is("lessons.deleted_at", null)
         .order("order_index", { ascending: true });
       if (error) throw error;
       return data as unknown as ModuleWithLessons[];

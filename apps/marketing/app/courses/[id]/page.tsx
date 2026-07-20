@@ -29,6 +29,8 @@ async function getCourse(id: string) {
     .eq("id", id)
     .eq("status", "published")
     .is("deleted_at", null)
+    .is("modules.deleted_at", null)
+    .is("modules.lessons.deleted_at", null)
     .single();
 
   return course;

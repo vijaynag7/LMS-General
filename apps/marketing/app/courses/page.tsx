@@ -18,6 +18,8 @@ async function getCourses() {
     .eq("tenant_id", tenant.id)
     .eq("status", "published")
     .is("deleted_at", null)
+    .is("modules.deleted_at", null)
+    .is("modules.lessons.deleted_at", null)
     .order("created_at", { ascending: false });
 
   return courses ?? [];
