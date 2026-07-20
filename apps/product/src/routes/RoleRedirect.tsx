@@ -5,7 +5,7 @@ const ROLE_HOME: Record<string, string> = {
   institute_admin: "/app/admin",
   faculty: "/app/faculty",
   student: "/app/student",
-  super_admin: "/app/admin",
+  super_admin: "/app/super-admin",
   parent: "/app/student",
   support: "/app/admin",
 };

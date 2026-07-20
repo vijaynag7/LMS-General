@@ -23,6 +23,7 @@ import FacultyLivePage from "@/features/faculty/FacultyLivePage";
 import StudentDashboardPage from "@/features/student/StudentDashboardPage";
 import MyCoursesPage from "@/features/student/MyCoursesPage";
 import CoursePlayerPage from "@/features/student/CoursePlayerPage";
+import SuperAdminDashboardPage from "@/features/super-admin/SuperAdminDashboardPage";
 
 export default function App() {
   return (
@@ -64,6 +65,10 @@ export default function App() {
               <Route index element={<StudentDashboardPage />} />
               <Route path="courses" element={<MyCoursesPage />} />
               <Route path="courses/:courseId" element={<CoursePlayerPage />} />
+            </Route>
+
+            <Route path="super-admin" element={<RequireRole allow={["super_admin"]} />}>
+              <Route index element={<SuperAdminDashboardPage />} />
             </Route>
           </Route>
         </Route>

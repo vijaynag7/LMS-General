@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Users, Calendar, GraduationCap, LogOut, Settings } from "lucide-react";
+import { LayoutDashboard, BookOpen, Users, Calendar, GraduationCap, LogOut, Settings, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ const NAV_BY_ROLE: Record<string, { to: string; label: string; icon: typeof Layo
     { to: "/app/student", label: "Dashboard", icon: LayoutDashboard },
     { to: "/app/student/courses", label: "My Courses", icon: BookOpen },
   ],
+  super_admin: [{ to: "/app/super-admin", label: "Institutes", icon: Building2 }],
 };
 
 export default function AppLayout() {
@@ -35,7 +36,9 @@ export default function AppLayout() {
     <div className="flex min-h-screen">
       <aside className="flex w-60 shrink-0 flex-col border-r bg-card">
         <div className="border-b px-4 py-4">
-          <p className="truncate font-semibold">{tenant?.name ?? "EduSaaS"}</p>
+          <p className="truncate font-semibold">
+            {profile?.role === "super_admin" ? "EduSaaS Platform" : tenant?.name ?? "EduSaaS"}
+          </p>
           <p className="text-xs text-muted-foreground">{profile?.role.replace("_", " ")}</p>
         </div>
         <nav className="flex-1 space-y-1 p-3">

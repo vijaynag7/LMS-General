@@ -1,7 +1,7 @@
 -- Demo data for local development. Applied automatically by `supabase db reset`.
 -- Test-only credentials — never use this pattern to seed a production project.
--- Login: admin@demo.edusaas.app / faculty@demo.edusaas.app / student@demo.edusaas.app,
--- password "Password123!" for all three.
+-- Login: admin@demo.edusaas.app / faculty@demo.edusaas.app / student@demo.edusaas.app
+-- / superadmin@edusaas.app, password "Password123!" for all four.
 
 do $$
 declare
@@ -13,6 +13,7 @@ declare
   v_module_id uuid := '66666666-6666-6666-6666-666666666666';
   v_lesson_live_id uuid := '77777777-7777-7777-7777-777777777777';
   v_lesson_vod_id uuid := '88888888-8888-8888-8888-888888888888';
+  v_super_admin_id uuid := '99999999-9999-9999-9999-999999999999';
 begin
   insert into public.tenants (id, name, slug, branding, status, subscription_plan)
   values (
@@ -46,13 +47,21 @@ begin
      'student@demo.edusaas.app', crypt('Password123!', gen_salt('bf')), now(),
      '{"provider":"email","providers":["email"]}',
      jsonb_build_object('tenant_id', v_tenant_id, 'role', 'student', 'name', 'Demo Student'),
+     now(), now(), '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', v_super_admin_id, 'authenticated', 'authenticated',
+     'superadmin@edusaas.app', crypt('Password123!', gen_salt('bf')), now(),
+     '{"provider":"email","providers":["email"]}',
+     -- no tenant_id key at all — handle_new_user() resolves that to NULL,
+     -- which is what marks this profile as platform-level, not tenant-scoped.
+     jsonb_build_object('role', 'super_admin', 'name', 'Platform Super Admin'),
      now(), now(), '', '', '', '');
 
   insert into auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
   values
     (gen_random_uuid(), v_admin_id::text, v_admin_id, jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@demo.edusaas.app'), 'email', now(), now(), now()),
     (gen_random_uuid(), v_faculty_id::text, v_faculty_id, jsonb_build_object('sub', v_faculty_id::text, 'email', 'faculty@demo.edusaas.app'), 'email', now(), now(), now()),
-    (gen_random_uuid(), v_student_id::text, v_student_id, jsonb_build_object('sub', v_student_id::text, 'email', 'student@demo.edusaas.app'), 'email', now(), now(), now());
+    (gen_random_uuid(), v_student_id::text, v_student_id, jsonb_build_object('sub', v_student_id::text, 'email', 'student@demo.edusaas.app'), 'email', now(), now(), now()),
+    (gen_random_uuid(), v_super_admin_id::text, v_super_admin_id, jsonb_build_object('sub', v_super_admin_id::text, 'email', 'superadmin@edusaas.app'), 'email', now(), now(), now());
 
   insert into public.courses (id, tenant_id, title, description, duration_label, price, currency, validity_days, status, created_by)
   values (
