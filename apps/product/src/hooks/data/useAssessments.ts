@@ -71,6 +71,31 @@ export function useCreateQuestion(lessonId: string, quizId: string | undefined) 
   });
 }
 
+export function useUpdateQuestion(lessonId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      prompt: string;
+      options: string[];
+      correctOptionIndex: number;
+      marks: number;
+    }) => {
+      const { error } = await supabase
+        .from("questions")
+        .update({
+          prompt: input.prompt,
+          options: input.options,
+          correct_option_index: input.correctOptionIndex,
+          marks: input.marks,
+        })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quiz", "lesson", lessonId] }),
+  });
+}
+
 export function useDeleteQuestion(lessonId: string) {
   const queryClient = useQueryClient();
   return useMutation({

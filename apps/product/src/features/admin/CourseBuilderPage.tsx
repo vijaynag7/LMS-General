@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Trash2, Video, HelpCircle, ClipboardList, File, Upload, X } from "lucide-react";
+import { GripVertical, Plus, Trash2, Video, HelpCircle, ClipboardList, File, Upload, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useCourse, useUpdateCourse } from "@/hooks/data/useCourses";
 import {
@@ -17,7 +17,7 @@ import {
   useUploadLessonContent,
   type ModuleWithLessons,
 } from "@/hooks/data/useCurriculum";
-import { useQuizForLesson, useCreateQuiz, useCreateQuestion, useDeleteQuestion } from "@/hooks/data/useAssessments";
+import { useQuizForLesson, useCreateQuiz, useCreateQuestion, useUpdateQuestion, useDeleteQuestion } from "@/hooks/data/useAssessments";
 import type { Database, LessonType } from "@edusaas/shared";
 import { useLiveSessionForLesson, useUpdateLiveSessionSchedule } from "@/hooks/data/useLiveSession";
 import { Button } from "@/components/ui/button";
@@ -364,8 +364,10 @@ function QuizEditor({ lessonId, lessonTitle }: { lessonId: string; lessonTitle: 
   const { data: quiz } = useQuizForLesson(lessonId);
   const createQuiz = useCreateQuiz(lessonId, lessonTitle);
   const createQuestion = useCreateQuestion(lessonId, quiz?.id);
+  const updateQuestion = useUpdateQuestion(lessonId);
   const deleteQuestion = useDeleteQuestion(lessonId);
 
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [prompt, setPrompt] = React.useState("");
   const [options, setOptions] = React.useState(["", ""]);
   const [correctIndex, setCorrectIndex] = React.useState(0);
@@ -382,31 +384,46 @@ function QuizEditor({ lessonId, lessonTitle }: { lessonId: string; lessonTitle: 
   }
 
   const resetForm = () => {
+    setEditingId(null);
     setPrompt("");
     setOptions(["", ""]);
     setCorrectIndex(0);
     setMarks(1);
   };
 
-  const addQuestion = async () => {
+  const startEdit = (q: NonNullable<typeof quiz.questions>[number]) => {
+    setEditingId(q.id);
+    setPrompt(q.prompt);
+    setOptions((q.options as string[] | null)?.length ? [...(q.options as string[])] : ["", ""]);
+    setCorrectIndex(q.correct_option_index ?? 0);
+    setMarks(Number(q.marks));
+  };
+
+  const saveQuestion = async () => {
     if (!prompt.trim() || options.some((o) => !o.trim())) {
       toast.error("Fill in the question and every option");
       return;
     }
     try {
-      await createQuestion.mutateAsync({
-        type: "mcq",
-        prompt,
-        options,
-        correctOptionIndex: correctIndex,
-        marks,
-        orderIndex: quiz.questions?.length ?? 0,
-      });
+      if (editingId) {
+        await updateQuestion.mutateAsync({ id: editingId, prompt, options, correctOptionIndex: correctIndex, marks });
+      } else {
+        await createQuestion.mutateAsync({
+          type: "mcq",
+          prompt,
+          options,
+          correctOptionIndex: correctIndex,
+          marks,
+          orderIndex: quiz.questions?.length ?? 0,
+        });
+      }
       resetForm();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not add question");
+      toast.error(err instanceof Error ? err.message : "Could not save question");
     }
   };
+
+  const isSaving = createQuestion.isPending || updateQuestion.isPending;
 
   return (
     <div className="space-y-3 pl-6">
@@ -416,13 +433,25 @@ function QuizEditor({ lessonId, lessonTitle }: { lessonId: string; lessonTitle: 
             <span className="font-medium">
               {i + 1}. {q.prompt} <span className="text-muted-foreground">({q.marks} marks)</span>
             </span>
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={() => deleteQuestion.mutate(q.id)}
-            >
-              <Trash2 className="size-3.5" />
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => startEdit(q)}
+              >
+                <Pencil className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  deleteQuestion.mutate(q.id);
+                  if (editingId === q.id) resetForm();
+                }}
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
           </div>
           <ul className="mt-1.5 space-y-0.5">
             {((q.options as string[] | null) ?? []).map((opt, oi) => (
@@ -436,6 +465,7 @@ function QuizEditor({ lessonId, lessonTitle }: { lessonId: string; lessonTitle: 
       ))}
 
       <div className="space-y-2 rounded-md border border-dashed px-3 py-3">
+        {editingId && <p className="text-xs font-medium text-brand">Editing question</p>}
         <Input
           placeholder="Question"
           value={prompt}
@@ -486,8 +516,13 @@ function QuizEditor({ lessonId, lessonTitle }: { lessonId: string; lessonTitle: 
             onChange={(e) => setMarks(Number(e.target.value))}
             className="h-7 w-16 text-xs"
           />
-          <Button size="sm" className="ml-auto h-7 text-xs" onClick={addQuestion} disabled={createQuestion.isPending}>
-            Add question
+          {editingId && (
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={resetForm}>
+              Cancel
+            </Button>
+          )}
+          <Button size="sm" className={editingId ? "h-7 text-xs" : "ml-auto h-7 text-xs"} onClick={saveQuestion} disabled={isSaving}>
+            {editingId ? "Save changes" : "Add question"}
           </Button>
         </div>
       </div>
