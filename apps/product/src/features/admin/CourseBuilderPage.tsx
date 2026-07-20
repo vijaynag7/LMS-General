@@ -58,8 +58,12 @@ export default function CourseBuilderPage() {
 
   const addModule = async () => {
     if (!newModuleTitle.trim()) return;
-    await createModule.mutateAsync({ title: newModuleTitle, order: modules?.length ?? 0 });
-    setNewModuleTitle("");
+    try {
+      await createModule.mutateAsync({ title: newModuleTitle, order: modules?.length ?? 0 });
+      setNewModuleTitle("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not add module");
+    }
   };
 
   return (
