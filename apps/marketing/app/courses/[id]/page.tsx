@@ -10,6 +10,10 @@ import {
   Infinity as InfinityIcon,
   PlayCircle,
   UserRound,
+  Laptop2,
+  Radio,
+  MessageCircleQuestion,
+  RotateCcw,
 } from "lucide-react";
 import { supabase, TENANT_SLUG } from "@/lib/supabase";
 import { CurriculumAccordion } from "./curriculum-accordion";
@@ -25,12 +29,13 @@ async function getCourse(id: string) {
 
   const { data: course } = await supabase
     .from("courses")
-    .select("*, modules(*, lessons(*))")
+    .select("*, modules(*, lessons(*)), course_instructors(*)")
     .eq("id", id)
     .eq("status", "published")
     .is("deleted_at", null)
     .is("modules.deleted_at", null)
     .is("modules.lessons.deleted_at", null)
+    .is("course_instructors.deleted_at", null)
     .single();
 
   return course;
@@ -117,11 +122,53 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     </div>
   );
 
-  const instructorsTab = (
-    <div className="rounded-xl border border-dashed border-border p-8 text-center">
-      <UserRound className="mx-auto size-8 text-muted-foreground" />
-      <p className="mt-3 font-medium">Instructor details coming soon</p>
-      <p className="mt-1 text-sm text-muted-foreground">We'll introduce the faculty teaching this course here.</p>
+  const instructors = (course.course_instructors ?? []).slice().sort((a, b) => a.order_index - b.order_index);
+
+  const instructorsTab =
+    instructors.length > 0 ? (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {instructors.map((instructor) => (
+          <div key={instructor.id} className="flex items-start gap-3 rounded-xl border border-border p-4">
+            {instructor.photo_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- external, per-tenant instructor photo URLs */
+              <img src={instructor.photo_url} alt={instructor.name} className="size-12 shrink-0 rounded-full object-cover" />
+            ) : (
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted">
+                <UserRound className="size-6 text-muted-foreground" />
+              </div>
+            )}
+            <div>
+              <p className="font-medium">{instructor.name}</p>
+              {instructor.title && <p className="text-xs text-brand">{instructor.title}</p>}
+              {instructor.bio && <p className="mt-1 text-sm text-muted-foreground">{instructor.bio}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="rounded-xl border border-dashed border-border p-8 text-center">
+        <UserRound className="mx-auto size-8 text-muted-foreground" />
+        <p className="mt-3 font-medium">Instructor details coming soon</p>
+        <p className="mt-1 text-sm text-muted-foreground">We'll introduce the faculty teaching this course here.</p>
+      </div>
+    );
+
+  const howToUseTab = (
+    <div className="space-y-3 text-sm text-muted-foreground">
+      <HowToItem icon={Laptop2} title="Use a laptop or desktop where you can">
+        Live classes and practical software walkthroughs are easiest to follow on a bigger screen — mobile works
+        for catching up, but a laptop is best for the live sessions themselves.
+      </HowToItem>
+      <HowToItem icon={Radio} title="Show up live when you can">
+        You'll get the most out of a live class by attending it in real time — that's when you can actually ask
+        questions and get an answer on the spot.
+      </HowToItem>
+      <HowToItem icon={RotateCcw} title="Missed one? The recording's already there">
+        Every live class is auto-recorded and added to the course as soon as it ends — check the Content tab.
+      </HowToItem>
+      <HowToItem icon={MessageCircleQuestion} title="Ask questions">
+        Don't sit on a doubt — bring it to the next live session. That's what the live format is for.
+      </HowToItem>
     </div>
   );
 
@@ -142,6 +189,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       <FaqItem question="What if I have doubts during the course?">
         Live classes are built for real-time Q&A with faculty. Check the Content tab to see which lessons in this
         course are live sessions.
+      </FaqItem>
+      <FaqItem question="What if I miss a live class?">
+        No problem — it's recorded automatically and shows up in the Content tab, usually within a few minutes of
+        the session ending.
+      </FaqItem>
+      <FaqItem question="Do I need any prior experience to join?">
+        Check the course description on the Overview tab — most courses here are built to take you from the
+        basics, but requirements vary by course.
       </FaqItem>
     </div>
   );
@@ -185,6 +240,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
               { id: "overview", label: "Overview", content: overviewTab },
               { id: "content", label: "Content", content: contentTab },
               { id: "instructors", label: "Instructors", content: instructorsTab },
+              { id: "how-to-use", label: "How to use", content: howToUseTab },
               { id: "faq", label: "FAQ", content: faqTab },
               { id: "reviews", label: "Reviews", content: reviewsTab },
             ]}
@@ -230,6 +286,26 @@ function Feature({ icon: Icon, title, description }: { icon: typeof BadgeCheck; 
       <Icon className="size-5 text-brand" />
       <p className="mt-2 text-sm font-medium">{title}</p>
       <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function HowToItem({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof Laptop2;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-border p-4">
+      <Icon className="mt-0.5 size-5 shrink-0 text-brand" />
+      <div>
+        <p className="font-medium text-foreground">{title}</p>
+        <p className="mt-1">{children}</p>
+      </div>
     </div>
   );
 }

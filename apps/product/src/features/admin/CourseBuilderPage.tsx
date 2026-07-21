@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Trash2, Video, HelpCircle, ClipboardList, File, Upload, X, Pencil } from "lucide-react";
+import { GripVertical, Plus, Trash2, Video, HelpCircle, ClipboardList, File, Upload, X, Pencil, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useCourse, useUpdateCourse } from "@/hooks/data/useCourses";
 import {
@@ -18,6 +18,7 @@ import {
   type ModuleWithLessons,
 } from "@/hooks/data/useCurriculum";
 import { useQuizForLesson, useCreateQuiz, useCreateQuestion, useUpdateQuestion, useDeleteQuestion } from "@/hooks/data/useAssessments";
+import { useInstructors, useCreateInstructor, useUpdateInstructor, useDeleteInstructor } from "@/hooks/data/useInstructors";
 import type { Database, LessonType } from "@edusaas/shared";
 import { useLiveSessionForLesson, useUpdateLiveSessionSchedule } from "@/hooks/data/useLiveSession";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export default function CourseBuilderPage() {
   const updateCourse = useUpdateCourse(courseId!);
   const [newModuleTitle, setNewModuleTitle] = React.useState("");
   const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [instructorsOpen, setInstructorsOpen] = React.useState(false);
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (!modules) return;
@@ -83,6 +85,9 @@ export default function CourseBuilderPage() {
           <Button size="sm" variant="outline" onClick={() => setDetailsOpen((v) => !v)}>
             {detailsOpen ? "Close details" : "Edit details"}
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setInstructorsOpen((v) => !v)}>
+            {instructorsOpen ? "Close trainers" : "Trainers"}
+          </Button>
           {course?.status !== "published" && (
             <Button
               size="sm"
@@ -103,6 +108,8 @@ export default function CourseBuilderPage() {
           updateCourse={updateCourse}
         />
       )}
+
+      {instructorsOpen && courseId && <InstructorsPanel courseId={courseId} />}
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
@@ -201,6 +208,117 @@ function CourseDetailsForm({
         <Button size="sm" variant="brand" onClick={save} disabled={updateCourse.isPending}>
           {updateCourse.isPending ? "Saving…" : "Save details"}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InstructorsPanel({ courseId }: { courseId: string }) {
+  const { data: instructors } = useInstructors(courseId);
+  const createInstructor = useCreateInstructor(courseId);
+  const updateInstructor = useUpdateInstructor(courseId);
+  const deleteInstructor = useDeleteInstructor(courseId);
+
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [name, setName] = React.useState("");
+  const [title, setTitle] = React.useState("");
+  const [bio, setBio] = React.useState("");
+  const [photoUrl, setPhotoUrl] = React.useState("");
+
+  const resetForm = () => {
+    setEditingId(null);
+    setName("");
+    setTitle("");
+    setBio("");
+    setPhotoUrl("");
+  };
+
+  const startEdit = (instructor: NonNullable<typeof instructors>[number]) => {
+    setEditingId(instructor.id);
+    setName(instructor.name);
+    setTitle(instructor.title ?? "");
+    setBio(instructor.bio ?? "");
+    setPhotoUrl(instructor.photo_url ?? "");
+  };
+
+  const save = async () => {
+    if (!name.trim()) {
+      toast.error("Enter a name first");
+      return;
+    }
+    try {
+      if (editingId) {
+        await updateInstructor.mutateAsync({ id: editingId, name, title, bio, photoUrl });
+      } else {
+        await createInstructor.mutateAsync({ name, title, bio, photoUrl, order: instructors?.length ?? 0 });
+      }
+      resetForm();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save trainer");
+    }
+  };
+
+  const isSaving = createInstructor.isPending || updateInstructor.isPending;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Trainers</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {instructors && instructors.length > 0 && (
+          <div className="space-y-2">
+            {instructors.map((instructor) => (
+              <div key={instructor.id} className="flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <UserRound className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">
+                      {instructor.name}
+                      {instructor.title && <span className="font-normal text-muted-foreground"> — {instructor.title}</span>}
+                    </p>
+                    {instructor.bio && <p className="mt-0.5 text-xs text-muted-foreground">{instructor.bio}</p>}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => startEdit(instructor)}>
+                    <Pencil className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      deleteInstructor.mutate(instructor.id);
+                      if (editingId === instructor.id) resetForm();
+                    }}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-2 rounded-md border border-dashed p-3">
+          {editingId && <p className="text-xs font-medium text-brand">Editing trainer</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="h-8 text-xs" />
+            <Input placeholder="Title (e.g. CA, Head Trainer)" value={title} onChange={(e) => setTitle(e.target.value)} className="h-8 text-xs" />
+          </div>
+          <Textarea placeholder="Short bio" rows={2} value={bio} onChange={(e) => setBio(e.target.value)} className="text-xs" />
+          <Input placeholder="Photo URL (optional)" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} className="h-8 text-xs" />
+          <div className="flex items-center gap-2 pt-1">
+            {editingId && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={resetForm}>
+                Cancel
+              </Button>
+            )}
+            <Button size="sm" className={editingId ? "h-7 text-xs" : "ml-auto h-7 text-xs"} onClick={save} disabled={isSaving}>
+              {editingId ? "Save changes" : "Add trainer"}
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

@@ -381,6 +381,60 @@ export type Database = {
           },
         ]
       }
+      course_instructors: {
+        Row: {
+          bio: string | null
+          course_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          order_index: number
+          photo_url: string | null
+          tenant_id: string
+          title: string | null
+        }
+        Insert: {
+          bio?: string | null
+          course_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          photo_url?: string | null
+          tenant_id: string
+          title?: string | null
+        }
+        Update: {
+          bio?: string | null
+          course_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          photo_url?: string | null
+          tenant_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_instructors_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_instructors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           created_at: string
